@@ -45,7 +45,7 @@ if APP_COPYRIGHT_YEAR_START == APP_COPYRIGHT_YEAR_CURRENT:
 else:
     APP_COPYRIGHT_YEARS = f"{APP_COPYRIGHT_YEAR_START}-{APP_COPYRIGHT_YEAR_CURRENT}"
 APP_COPYRIGHT_NOTICE = (
-    f"Copyright (c) {APP_COPYRIGHT_YEARS}, blazr"
+    f"A new dataURI in seconds — copyright (c) {APP_COPYRIGHT_YEARS}, blazr"
 )
 # DETERMINE LOGO COLOR FROM APP_VERSION
 APP_LOGO_COLOR = 1
@@ -132,17 +132,18 @@ def parse_cmdline_arguments() -> tuple:
     examples += f"{APP_FILE_NAME} -i funny_meme.png --file-output funny_out.html -q\n"
     examples += ' '
     version_str = f"\033[9{APP_LOGO_COLOR}mv{APP_VERSION}\033[0m"
+    logo = APP_LOGO.format(APP_LOGO_COLOR,APP_VERSION,APP_COPYRIGHT_NOTICE)
     parser = argparse.ArgumentParser(
-        description=f"\ndataURI {version_str} — a new dataURI in seconds\n\n",
+        description=f"\n{logo}",
         epilog=examples,
         formatter_class=RawTextHelpFormatter,
-        exit_on_error=True
+        exit_on_error=False
         )
     # mandatory = parser.add_mutually_exclusive_group( required=True )
     mandatory = parser.add_argument_group("Mandatory")
     optional = parser.add_argument_group("Optional")
     mandatory.add_argument('-i', '--file-input', dest='file_input', metavar='<FILE IN>', required=True, help=f"path to input file")
-    optional.add_argument('-o', '--file-output', dest='file_output', metavar='<FILE OUT>', required=False, help='path to output file (optional)')
+    optional.add_argument('-o', '--file-output', dest='file_output', metavar='<FILE OUT>', required=False, help='path to output HTML file (optional)')
     optional.add_argument('-f', '--force', dest='force_write', action='store_true', required=False, help='overwrite existing output files without warning')
     optional.add_argument('-q', '--quiet', dest='quiet', action='store_true', required=False, help='do not print unnecessary stuff to standard out')
 
@@ -151,17 +152,22 @@ def parse_cmdline_arguments() -> tuple:
     parser.set_defaults( file_output=None )
     parser.set_defaults( force_write=False )
     parser.set_defaults( quiet=False )
-    args = parser.parse_args()
-    if not args.quiet:
+    try:
+        args = parser.parse_args()
+        if not args.quiet:
+            os.system('clear')
+            print_logo()
+        return (
+            args.file_input, 
+            args.file_output,
+            args.force_write,
+            args.quiet
+            )
+    except Exception as e:
         os.system('clear')
         print_logo()
-
-    return (
-        args.file_input, 
-        args.file_output,
-        args.force_write,
-        args.quiet
-        )
+        print_styled( f"WELCOME.", "blue", end="\n" )
+        exit_with_code( 1, f"ERROR: {e}" )
 
 def exit_with_code( code, optional_message=None, quiet=False ):
     should_log = not quiet
@@ -181,15 +187,15 @@ def convert_file( filein, fileout, force_write, should_log ):
   should_log = not quiet
   try:
     data_uri = DataURI.from_file(filein)
-    print_styled( f"INPUT FILE: {filein}", "green", prefix="\n", end="\n", should_log=should_log )
+    print_styled( f" INPUT: {filein}", "cyan", prefix="\n", end="\n", should_log=should_log )
     if not fileout:
         if should_log:
-            print_styled( f"{data_uri}", "cyan", prefix="\n", end="\n\n", should_log=should_log )
+            print_styled( f"OUTPUT: {data_uri}", "cyan", prefix="", end="\n\n", should_log=should_log )
         else:
             print( data_uri, end=None )
     filename_input = os.path.basename( filein )
     if fileout:
-        print_styled( f"OUTPUT FILE: {fileout}", "green", prefix="\n", end="\n\n", should_log=should_log )
+        print_styled( f"OUTPUT: {fileout}", "cyan", prefix="", end="\n\n", should_log=should_log )
         was_existing = os.path.exists( file_output ) and force_write
         with open(fileout, 'w') as export_file:
             html_to_write = f"<html><body><p><b>Image/Preview:</b><br><img style='background-color:white;padding:3px;border:1px solid gray;margin:10px;' src='{data_uri}'></p>"
@@ -197,11 +203,11 @@ def convert_file( filein, fileout, force_write, should_log ):
             html_to_write += f"<p><b>Data URI:</b><br><div style='background-color:#ddd;padding:7px;;overflow-wrap:break-word;font-family:Courier;margin:10px;'>{data_uri}</div></p></body></html>"
             export_file.write(html_to_write)
             if was_existing:
-                print_styled( f"Overwritten file '{fileout}' successfully.", "green", prefix="", should_log=should_log )
+                print_styled( f"OK: Overwritten file '{fileout}' successfully.", "green", prefix="", should_log=should_log )
             else:
-                print_styled( f"Written to file '{fileout}' successfully.", "green", prefix="", should_log=should_log )
+                print_styled( f"OK: Written to file '{fileout}' successfully.", "green", prefix="", should_log=should_log )
     else:
-        print_styled( f"No files created/written.", "yellow", prefix="", should_log=should_log )
+        print_styled( f"OK: No files created/written.", "yellow", prefix="", should_log=should_log )
   except Exception as e:
     exit_with_code( 1, f"ERROR: Writing file '{fileout}'.\n{e}", quiet=quiet )
 
@@ -214,10 +220,10 @@ if __name__ == "__main__":
     if should_log:
         print_styled( f"WELCOME.", "blue", end="\n" )
     if not os.path.exists( file_input ):
-        exit_with_code( 1, f"File '{file_input}' not found!", quiet=quiet )
+        exit_with_code( 1, f"ERROR: File '{file_input}' not found!", quiet=quiet )
     else:
         if not force_write and file_output and os.path.exists( file_output ):
-            exit_with_code( 1, f"File '{file_output}' already exists!", quiet=quiet )
+            exit_with_code( 1, f"ERROR: File '{file_output}' already exists!", quiet=quiet )
         else:
             convert_file( file_input, file_output, force_write, quiet )
 
