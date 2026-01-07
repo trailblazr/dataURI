@@ -17,7 +17,7 @@ import datetime
 from argparse import RawTextHelpFormatter
 from datauri import DataURI
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 # BAIL ON WRONG PYTHON VERSION
 if not sys.version_info.major == 3 and sys.version_info.minor >= 12:
