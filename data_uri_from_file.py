@@ -183,8 +183,10 @@ def convert_file( filein, fileout, force_write, should_log ):
     data_uri = DataURI.from_file(filein)
     print_styled( f"INPUT FILE: {filein}", "green", prefix="\n", end="\n", should_log=should_log )
     if not fileout:
-        print_styled( f"{data_uri}", "cyan", prefix="\n", end="\n\n", should_log=should_log )
-        print( data_uri, end=None )
+        if should_log:
+            print_styled( f"{data_uri}", "cyan", prefix="\n", end="\n\n", should_log=should_log )
+        else:
+            print( data_uri, end=None )
     filename_input = os.path.basename( filein )
     if fileout:
         print_styled( f"OUTPUT FILE: {fileout}", "green", prefix="\n", end="\n\n", should_log=should_log )
