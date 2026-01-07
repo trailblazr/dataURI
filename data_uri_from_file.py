@@ -155,7 +155,6 @@ def parse_cmdline_arguments() -> tuple:
     try:
         args = parser.parse_args()
         if not args.quiet:
-            os.system('clear')
             print_logo()
         return (
             args.file_input, 
@@ -164,10 +163,10 @@ def parse_cmdline_arguments() -> tuple:
             args.quiet
             )
     except Exception as e:
-        os.system('clear')
         print_logo()
         print_styled( f"WELCOME.", "blue", end="\n" )
         exit_with_code( 1, f"ERROR: {e}" )
+        
 
 def exit_with_code( code, optional_message=None, quiet=False ):
     should_log = not quiet
@@ -198,9 +197,11 @@ def convert_file( filein, fileout, force_write, should_log ):
         print_styled( f"OUTPUT: {fileout}", "cyan", prefix="", end="\n\n", should_log=should_log )
         was_existing = os.path.exists( file_output ) and force_write
         with open(fileout, 'w') as export_file:
-            html_to_write = f"<html><body><p><b>Image/Preview:</b><br><img style='background-color:white;padding:3px;border:1px solid gray;margin:10px;' src='{data_uri}'></p>"
-            html_to_write += f"<p><b>File/Preview:</b><br><div style='padding:7px;'><a href='{data_uri}' download='{filename_input}'>Download file</a></div></p>"
-            html_to_write += f"<p><b>Data URI:</b><br><div style='background-color:#ddd;padding:7px;;overflow-wrap:break-word;font-family:Courier;margin:10px;'>{data_uri}</div></p></body></html>"
+            html_to_write = f"<html><body><p><b>Image/Preview:</b><br><img style='max-width:90%;background-color:white;padding:3px;border:1px solid gray;margin:10px;' src='{data_uri}'></p>"
+            html_to_write += f"<p><b>Audio/Preview:</b><br><audio controls><source src='{data_uri}' type='{data_uri.mimetype}'>Your browser does not support the audio tag.</audio></p>"
+            html_to_write += f"<p><b>Video/Preview:</b><br><video style='max-width:90%;'><source src='{data_uri}' type='{data_uri.mimetype}'>Your browser does not support the video tag.</video></p>"
+            html_to_write += f"<p><b>File/Preview:</b><br><div style='padding:7px;'><a href='{data_uri}' download='{filename_input}' title='Download {filename_input}'>Download</a>&nbsp;{filename_input}</div></p>"
+            html_to_write += f"<p><b>Data URI ({data_uri.mimetype}):</b><br><div style='background-color:#ddd;padding:7px;;overflow-wrap:break-word;font-family:Courier;margin:10px;'>{data_uri}</div></p></body></html>"
             export_file.write(html_to_write)
             if was_existing:
                 print_styled( f"OK: Overwritten file '{fileout}' successfully.", "green", prefix="", should_log=should_log )
