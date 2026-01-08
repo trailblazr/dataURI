@@ -17,7 +17,7 @@ import datetime
 from argparse import RawTextHelpFormatter
 from datauri import DataURI
 
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 
 # BAIL ON WRONG PYTHON VERSION
 if not sys.version_info.major == 3 and sys.version_info.minor >= 12:
@@ -126,7 +126,8 @@ def print_logo():
 
 def parse_cmdline_arguments() -> tuple: 
     # PARSE INPUT ARGUMENTS
-    examples = f"\033[9{APP_LOGO_COLOR}mUSAGE EXAMPLES:\033[0m\n" 
+    examples = f"\033[9{APP_LOGO_COLOR}mUSAGE EXAMPLES:\033[0m\n"
+    examples += f"{APP_FILE_NAME} --text \"Hello world.\"\n"
     examples += f"{APP_FILE_NAME} --file-input funny_meme.png\n"
     examples += f"{APP_FILE_NAME} -i funny_meme.jpg -o funny_out.html -f\n"
     examples += f"{APP_FILE_NAME} -i funny_meme.png --file-output funny_out.html -q\n"
@@ -139,15 +140,16 @@ def parse_cmdline_arguments() -> tuple:
         formatter_class=RawTextHelpFormatter,
         exit_on_error=False
         )
-    # mandatory = parser.add_mutually_exclusive_group( required=True )
     mandatory = parser.add_argument_group("Mandatory")
+    mandatory.add_argument('-t', '--text', dest='text_input', metavar='<TEXT>', required=False, help=f"input string given to encode")
+    mandatory.add_argument('-i', '--file-input', dest='file_input', metavar='<FILE IN>', required=False, help=f"path to input file to encode")
     optional = parser.add_argument_group("Optional")
-    mandatory.add_argument('-i', '--file-input', dest='file_input', metavar='<FILE IN>', required=True, help=f"path to input file")
     optional.add_argument('-o', '--file-output', dest='file_output', metavar='<FILE OUT>', required=False, help='path to output HTML file (optional)')
     optional.add_argument('-f', '--force', dest='force_write', action='store_true', required=False, help='overwrite existing output files without warning')
     optional.add_argument('-q', '--quiet', dest='quiet', action='store_true', required=False, help='do not print unnecessary stuff to standard out')
 
     # DEFAULTS
+    parser.set_defaults( text_input=None )
     parser.set_defaults( file_input=None )
     parser.set_defaults( file_output=None )
     parser.set_defaults( force_write=False )
@@ -157,6 +159,7 @@ def parse_cmdline_arguments() -> tuple:
         if not args.quiet:
             print_logo()
         return (
+            args.text_input,
             args.file_input, 
             args.file_output,
             args.force_write,
@@ -181,6 +184,13 @@ def exit_with_code( code, optional_message=None, quiet=False ):
             print_styled( exit_msg, "red", should_log=should_log )
             print_styled( f"GOODBYE.", "blue",end="\n\n",prefix="\n" )
         sys.exit( code )
+
+def convert_text( text_input, should_log ):
+    data_uri = DataURI.make('text/html', charset='utf-8', base64=True, data=text_input)
+    if should_log:
+        print_styled( f"OUTPUT: {data_uri}", "cyan", prefix="\n", end="\n", should_log=should_log )
+    else:
+        print( data_uri, end=None )
 
 def convert_file( filein, fileout, force_write, should_log ):
   should_log = not quiet
@@ -216,16 +226,23 @@ def convert_file( filein, fileout, force_write, should_log ):
 # MAIN
 ########
 if __name__ == "__main__":
-    file_input, file_output, force_write, quiet = parse_cmdline_arguments()
+    text_input, file_input, file_output, force_write, quiet = parse_cmdline_arguments()
     should_log = not quiet
     if should_log:
         print_styled( f"WELCOME.", "blue", end="\n" )
-    if not os.path.exists( file_input ):
-        exit_with_code( 1, f"ERROR: File '{file_input}' not found!", quiet=quiet )
+    if text_input and file_input:
+        exit_with_code( 1, f"ERROR: Only one input allowed.", quiet=quiet )
+    if text_input:
+        convert_text( text_input, should_log )
     else:
-        if not force_write and file_output and os.path.exists( file_output ):
-            exit_with_code( 1, f"ERROR: File '{file_output}' already exists!", quiet=quiet )
+        if not file_input and not text_input:
+            exit_with_code( 1, f"ERROR: Not enough parameters or content given.", quiet=quiet )
+        if not os.path.exists( file_input ):
+            exit_with_code( 1, f"ERROR: File '{file_input}' not found!", quiet=quiet )
         else:
-            convert_file( file_input, file_output, force_write, quiet )
+            if not force_write and file_output and os.path.exists( file_output ):
+                exit_with_code( 1, f"ERROR: File '{file_output}' already exists!", quiet=quiet )
+            else:
+                convert_file( file_input, file_output, force_write, quiet )
 
     print_styled( f"GOODBYE.", "blue",end="\n\n",prefix="\n", should_log=should_log )
